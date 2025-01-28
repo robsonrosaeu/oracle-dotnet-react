@@ -1,20 +1,30 @@
-# Utiliza imagem oficial do SDK .NET para build
+# Etapa de build
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
 
-# Copia os arquivos do projeto e restaura dependências
-# COPY ./app/*.csproj ./
+# Copiar o arquivo de solução e o projeto para restaurar as dependências
+COPY backend.sln .
+COPY teste.csproj ./teste/
+
+# Restaurar as dependências do projeto específico
+WORKDIR /app/teste
 RUN dotnet restore
 
-# Copia todo o código e publica o aplicativo
-# COPY ./app/ ./
-RUN dotnet publish -c Release -o out
+# Copiar o restante do código
+COPY . .
 
-# Runtime image para execução da aplicação
+# Realizar a publicação do projeto específico
+RUN dotnet publish teste.csproj -c Release -o /app/publish
+
+# Etapa de execução
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
-COPY --from=build /app/out .
 
-# Expõe as portas do aplicativo
-EXPOSE 5000 5001
-ENTRYPOINT ["dotnet", "backend.dll"]
+# Copiar os artefatos da etapa de build
+COPY --from=build /app/publish .
+
+# Expor a porta correta, que é 8080
+EXPOSE 8080
+
+# Executar o aplicativo
+ENTRYPOINT ["dotnet", "teste.dll"]
