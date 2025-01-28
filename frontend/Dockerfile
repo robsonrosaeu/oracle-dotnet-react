@@ -1,18 +1,32 @@
-# Usa uma imagem do Node.js para construção do frontend
-FROM node:20 AS build
+# Use a imagem mais recente do Node.js como base
+FROM node:current-alpine AS build
+
+# Defina o diretório de trabalho dentro do container
 WORKDIR /app
 
-# Copia os arquivos do projeto
-COPY ./app/package.json ./
-COPY ./app/package-lock.json ./
+# Copie os arquivos necessários para o container
+COPY package.json package-lock.json ./
+
+# Instale as dependências
 RUN npm install
 
-# Copia o restante dos arquivos e constrói o frontend
-COPY ./app/ ./
-RUN npm run build
+# Copie o restante dos arquivos do projeto
+COPY . .
 
-# Serve os arquivos usando Nginx
-FROM nginx:1.25
-COPY --from=build /app/build /usr/share/nginx/html
-EXPOSE 5001
+# Compile a aplicação para produção
+RUN npm run build
+    
+# Use a imagem do Nginx para servir os arquivos estáticos
+FROM nginx:alpine
+
+# Copie o arquivo de configuração do Nginx
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copie os arquivos estáticos do build para o diretório de publicação do Nginx
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Exponha a porta 80
+EXPOSE 80
+
+# Comando para iniciar o Nginx
 CMD ["nginx", "-g", "daemon off;"]
